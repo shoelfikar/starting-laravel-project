@@ -10,29 +10,39 @@
       <div class="flex items-center justify-between">
         <div v-if="!isCollapsed" class="flex items-center gap-3">
           <!-- User Avatar -->
-          <div class="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg">
+          <div class="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
             {{ user.initials }}
           </div>
           <!-- User Info -->
           <div class="flex-1 min-w-0">
-            <h3 class="text-white font-semibold truncate">{{ user.name }}</h3>
-            <p class="text-gray-400 text-sm truncate">{{ user.email }}</p>
+            <h3 class="text-white font-medium text-sm truncate">{{ user.name }}</h3>
+            <p class="text-gray-400 text-xs truncate">{{ user.email }}</p>
           </div>
         </div>
         <div v-else class="w-full flex justify-center">
-          <div class="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold">
+          <div class="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs">
             {{ user.initials }}
           </div>
         </div>
-        <!-- Toggle Button -->
+        <!-- Toggle Button (Visible only when expanded) -->
         <button
+          v-if="!isCollapsed"
           @click="toggleSidebar"
           class="p-2 hover:bg-slate-800 rounded-lg transition-colors"
-          :class="isCollapsed ? 'ml-0' : ''"
         >
           <Menu class="w-5 h-5 text-gray-400" />
         </button>
       </div>
+    </div>
+
+    <!-- Toggle Button (Visible only when collapsed - Moved below header) -->
+    <div v-if="isCollapsed" class="w-full flex justify-center py-3 border-b border-slate-800">
+      <button
+        @click="toggleSidebar"
+        class="p-2 hover:bg-slate-800 rounded-lg transition-colors text-gray-400"
+      >
+        <Menu class="w-5 h-5" />
+      </button>
     </div>
 
     <!-- Search Bar -->
