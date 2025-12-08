@@ -17,6 +17,11 @@
             <h1 class="text-2xl font-bold text-white mb-2 text-center">Sign in to your account</h1>
           </div>
 
+          <!-- Error Message -->
+          <div v-if="errorMessage" class="mb-4 p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-500 text-sm text-center">
+            {{ errorMessage }}
+          </div>
+
           <!-- Form -->
           <form @submit.prevent="handleSubmit" class="space-y-5">
           <!-- Email Field -->
@@ -70,9 +75,11 @@
           <!-- Sign in Button -->
           <button
             type="submit"
-            class="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition duration-200 ease-in-out transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900"
+            :disabled="isLoading"
+            class="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg transition duration-200 ease-in-out transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Sign in
+            <span v-if="isLoading">Signing in...</span>
+            <span v-else>Sign in</span>
           </button>
         </form>
         </div>
@@ -147,15 +154,48 @@
 
 <script setup>
 import { ref } from 'vue';
+import { useRouter } from 'vue-router';
+import axios from '@/lib/axios';
 
+const router = useRouter();
 const formData = ref({
   email: '',
   password: '',
   remember: false
 });
+const isLoading = ref(false);
+const errorMessage = ref('');
 
-const handleSubmit = () => {
-  console.log('Login form submitted:', formData.value);
-  // Login logic will be added later when API is ready
+const handleSubmit = async () => {
+  isLoading.value = true;
+  errorMessage.value = '';
+
+  try {
+    const response = await axios.post('/api/auth/login', {
+      email: formData.value.email,
+      password: formData.value.password,
+      // remember: formData.value.remember // API doesn't support remember yet, but good to have in payload if needed later
+    });
+
+    const { access_token, user } = response.data;
+
+    // Store token and user info
+    localStorage.setItem('token', access_token);
+    localStorage.setItem('user', JSON.stringify(user));
+
+    // Redirect to dashboard
+    router.push('/dashboard');
+  } catch (error) {
+    console.error('Login error:', error);
+    if (error.response?.data?.errors?.email) {
+      errorMessage.value = error.response.data.errors.email[0];
+    } else if (error.response?.data?.message) {
+      errorMessage.value = error.response.data.message;
+    } else {
+      errorMessage.value = 'Login failed. Please check your credentials.';
+    }
+  } finally {
+    isLoading.value = false;
+  }
 };
 </script>

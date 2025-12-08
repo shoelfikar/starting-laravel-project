@@ -8,7 +8,7 @@ import Dashboard from '@/pages/Dashboard.vue';
 const routes = [
   {
     path: '/',
-    redirect: '/dashboard'
+    redirect: '/login'
   },
   {
     path: '/login',
@@ -112,10 +112,23 @@ const router = createRouter({
   routes
 });
 
-// Navigation guard untuk set document title
-router.beforeEach((to, _from, next) => {
+// Navigation guard
+router.beforeEach((to, from, next) => {
+  const isAuthenticated = !!localStorage.getItem('token');
+
+  // Set document title
   document.title = to.meta.title ? `${to.meta.title} - Laravel Vue` : 'Laravel Vue';
-  next();
+
+  if (to.meta.requiresAuth && !isAuthenticated) {
+    // Kalau butuh auth tapi belum login, lempar ke login
+    next({ name: 'login' });
+  } else if (to.meta.requiresAuth === false && isAuthenticated) {
+    // Kalau halaman khusus guest (misal login) tapi sudah login, lempar ke dashboard
+    next({ name: 'dashboard' });
+  } else {
+    // Selain itu lanjut
+    next();
+  }
 });
 
 export default router;
