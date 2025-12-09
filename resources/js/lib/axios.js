@@ -54,6 +54,7 @@ const refreshToken = async () => {
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');
         localStorage.removeItem('token_expiry');
+        localStorage.removeItem('remember_me');
         throw error;
     }
 };

@@ -77,9 +77,6 @@
                 Remember me
               </label>
             </div>
-            <a href="#" class="text-sm text-indigo-500 hover:text-indigo-400 font-medium">
-              Forgot password?
-            </a>
           </div>
 
           <!-- Sign in Button -->
@@ -186,7 +183,7 @@ const handleSubmit = async () => {
     const response = await axios.post('/api/auth/login', {
       email: formData.value.email,
       password: formData.value.password,
-      // remember: formData.value.remember // API doesn't support remember yet, but good to have in payload if needed later
+      remember: formData.value.remember
     });
 
     const { access_token, refresh_token, user, expires_in } = response.data;
@@ -195,6 +192,9 @@ const handleSubmit = async () => {
     localStorage.setItem('token', access_token);
     localStorage.setItem('refresh_token', refresh_token);
     localStorage.setItem('user', JSON.stringify(user));
+
+    // Store remember me preference
+    localStorage.setItem('remember_me', formData.value.remember.toString());
 
     // Store token expiry time (current time + expires_in seconds)
     const expiryTime = Date.now() + (expires_in * 1000);

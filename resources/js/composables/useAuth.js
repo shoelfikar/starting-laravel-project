@@ -66,6 +66,7 @@ export function useAuth() {
             localStorage.removeItem('refresh_token');
             localStorage.removeItem('user');
             localStorage.removeItem('token_expiry');
+            localStorage.removeItem('remember_me');
 
             isLoading.value = false;
 
@@ -104,6 +105,7 @@ export function useAuth() {
             localStorage.removeItem('refresh_token');
             localStorage.removeItem('user');
             localStorage.removeItem('token_expiry');
+            localStorage.removeItem('remember_me');
 
             error.value = 'Session expired. Please login again.';
             router.push('/login');

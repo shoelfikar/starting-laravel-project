@@ -12,24 +12,39 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
-    private function issueToken(User $user)
+    private function issueToken(User $user, $remember = false)
     {
         // Create access token using Passport
         $tokenResult = $user->createToken('auth_token');
+
+        // Set token expiration based on remember me
+        if ($remember) {
+            // Remember me: 7 days for access token
+            $tokenResult->token->expires_at = now()->addDays(7);
+            $accessTokenExpiresIn = 7 * 24 * 60 * 60; // 7 days in seconds
+            $refreshTokenExpiresAt = now()->addDays(14); // 14 days for refresh token
+        } else {
+            // Default: 30 minutes for access token
+            $tokenResult->token->expires_at = now()->addMinutes(30);
+            $accessTokenExpiresIn = 1800; // 30 minutes in seconds
+            $refreshTokenExpiresAt = now()->addDay(); // 1 day for refresh token
+        }
+
+        $tokenResult->token->save();
 
         // Create refresh token model directly
         $refreshToken = new \Laravel\Passport\RefreshToken();
         $refreshToken->id = \Illuminate\Support\Str::random(40);
         $refreshToken->access_token_id = $tokenResult->token->id;
         $refreshToken->revoked = false;
-        $refreshToken->expires_at = now()->addDay();
+        $refreshToken->expires_at = $refreshTokenExpiresAt;
         $refreshToken->save();
 
         return [
             'access_token' => $tokenResult->accessToken,
             'refresh_token' => $refreshToken->id,
             'token_type' => 'Bearer',
-            'expires_in' => 1800, // 30 minutes in seconds
+            'expires_in' => $accessTokenExpiresIn,
         ];
     }
 
@@ -74,6 +89,7 @@ class AuthController extends Controller
         $validator = Validator::make($request->all(), [
             'email' => 'required|string|email',
             'password' => 'required|string',
+            'remember' => 'boolean',
         ]);
 
         if ($validator->fails()) {
@@ -85,16 +101,17 @@ class AuthController extends Controller
 
         $validated = $validator->validated();
 
-        if (!Auth::attempt($validated)) {
+        if (!Auth::attempt(['email' => $validated['email'], 'password' => $validated['password']])) {
             throw ValidationException::withMessages([
                 'email' => ['Invalid credentials'],
             ]);
         }
 
         $user = Auth::user();
+        $remember = $validated['remember'] ?? false;
 
-        // Issue token directly (no HTTP request needed)
-        $tokenData = $this->issueToken($user);
+        // Issue token with remember me option
+        $tokenData = $this->issueToken($user, $remember);
 
         return response()->json([
             'message' => 'Login successful',
