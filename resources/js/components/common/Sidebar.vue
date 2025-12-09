@@ -93,11 +93,12 @@
               <component :is="item.icon" class="w-5 h-5 flex-shrink-0" />
               <span v-if="!isCollapsed" class="flex-1 text-left">{{ item.label }}</span>
               <ChevronDown
-                v-if="!isCollapsed"
-                :class="[
-                  'w-4 h-4 transition-transform',
-                  openSubmenus.includes(index) ? 'rotate-180' : ''
-                ]"
+                v-if="!isCollapsed && openSubmenus.includes(index)"
+                class="w-4 h-4 transition-transform"
+              />
+              <ChevronRight
+                v-else-if="!isCollapsed"
+                class="w-4 h-4 transition-transform"
               />
             </button>
 
@@ -176,10 +177,11 @@ const props = defineProps({
       {
         icon: User,
         label: 'Public Profile',
+        hasArrow: true,
         children: [
           { label: 'Overview', to: '/profile/overview' },
           { label: 'Settings', to: '/profile/settings' }
-        ]
+        ],
       },
       {
         icon: Settings,

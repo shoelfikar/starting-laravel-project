@@ -77,6 +77,15 @@
           </div>
         </div>
       </div>
+
+      <!-- Users Table -->
+      <div>
+        <div class="mb-4">
+          <h3 class="text-xl font-bold text-gray-800">Team Members</h3>
+          <p class="text-sm text-gray-500 mt-1">Manage your team members and their account permissions</p>
+        </div>
+        <DataTable />
+      </div>
     </div>
   </DashboardLayout>
 </template>
@@ -84,6 +93,7 @@
 <script setup>
 import { ref } from 'vue';
 import DashboardLayout from '@/layouts/DashboardLayout.vue';
+import DataTable from '@/components/common/DataTable.vue';
 import {
   LayoutDashboard,
   Mail,
