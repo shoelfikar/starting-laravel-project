@@ -44,14 +44,24 @@
             <label for="password" class="block text-sm font-medium text-gray-300 mb-1.5">
               Password
             </label>
-            <input
-              id="password"
-              v-model="formData.password"
-              type="password"
-              required
-              class="w-full px-3 py-2.5 bg-slate-800 border border-slate-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition text-sm"
-              placeholder="••••••••"
-            />
+            <div class="relative">
+              <input
+                id="password"
+                v-model="formData.password"
+                :type="showPassword ? 'text' : 'password'"
+                required
+                class="w-full px-3 py-2.5 pr-10 bg-slate-800 border border-slate-700 rounded text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition text-sm"
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                @click="showPassword = !showPassword"
+                class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-300 focus:outline-none transition"
+              >
+                <Eye v-if="!showPassword" class="w-5 h-5" />
+                <EyeOff v-else class="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           <!-- Remember me & Forgot password -->
@@ -156,6 +166,7 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from '@/lib/axios';
+import { Eye, EyeOff } from 'lucide-vue-next';
 
 const router = useRouter();
 const formData = ref({
@@ -165,6 +176,7 @@ const formData = ref({
 });
 const isLoading = ref(false);
 const errorMessage = ref('');
+const showPassword = ref(false);
 
 const handleSubmit = async () => {
   isLoading.value = true;
@@ -177,11 +189,16 @@ const handleSubmit = async () => {
       // remember: formData.value.remember // API doesn't support remember yet, but good to have in payload if needed later
     });
 
-    const { access_token, user } = response.data;
+    const { access_token, refresh_token, user, expires_in } = response.data;
 
-    // Store token and user info
+    // Store tokens and user info
     localStorage.setItem('token', access_token);
+    localStorage.setItem('refresh_token', refresh_token);
     localStorage.setItem('user', JSON.stringify(user));
+
+    // Store token expiry time (current time + expires_in seconds)
+    const expiryTime = Date.now() + (expires_in * 1000);
+    localStorage.setItem('token_expiry', expiryTime.toString());
 
     // Redirect to dashboard
     router.push('/dashboard');

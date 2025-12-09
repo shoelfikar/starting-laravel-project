@@ -12,6 +12,27 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    private function issueToken(User $user)
+    {
+        // Create access token using Passport
+        $tokenResult = $user->createToken('auth_token');
+
+        // Create refresh token model directly
+        $refreshToken = new \Laravel\Passport\RefreshToken();
+        $refreshToken->id = \Illuminate\Support\Str::random(40);
+        $refreshToken->access_token_id = $tokenResult->token->id;
+        $refreshToken->revoked = false;
+        $refreshToken->expires_at = now()->addDay();
+        $refreshToken->save();
+
+        return [
+            'access_token' => $tokenResult->accessToken,
+            'refresh_token' => $refreshToken->id,
+            'token_type' => 'Bearer',
+            'expires_in' => 1800, // 30 minutes in seconds
+        ];
+    }
+
     public function register(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -35,19 +56,22 @@ class AuthController extends Controller
             'password' => Hash::make($validated['password']),
         ]);
 
-        $token = $user->createToken('auth_token')->accessToken;
+        // Issue token directly (no HTTP request needed)
+        $tokenData = $this->issueToken($user);
 
         return response()->json([
             'message' => 'User registered successfully',
             'user' => $user,
-            'access_token' => $token,
+            'access_token' => $tokenData['access_token'],
+            'refresh_token' => $tokenData['refresh_token'],
             'token_type' => 'Bearer',
+            'expires_in' => $tokenData['expires_in'],
         ], 201);
     }
 
     public function login(Request $request)
     {
-        $validator =  Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
             'email' => 'required|string|email',
             'password' => 'required|string',
         ]);
@@ -68,14 +92,102 @@ class AuthController extends Controller
         }
 
         $user = Auth::user();
-        $token = $user->createToken('auth_token')->accessToken;
+
+        // Issue token directly (no HTTP request needed)
+        $tokenData = $this->issueToken($user);
 
         return response()->json([
             'message' => 'Login successful',
             'user' => $user,
-            'access_token' => $token,
+            'access_token' => $tokenData['access_token'],
+            'refresh_token' => $tokenData['refresh_token'],
             'token_type' => 'Bearer',
+            'expires_in' => $tokenData['expires_in'],
         ]);
+    }
+
+    public function refresh(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'refresh_token' => 'required|string',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'message' => 'Validation failed',
+                'errors' => $validator->errors()
+            ], 403);
+        }
+
+        try {
+            // Find the refresh token
+            $refreshToken = \Laravel\Passport\RefreshToken::find($request->refresh_token);
+
+            if (!$refreshToken) {
+                return response()->json([
+                    'message' => 'Invalid refresh token',
+                    'error' => 'token_not_found'
+                ], 401);
+            }
+
+            // Check if refresh token is revoked
+            if ($refreshToken->revoked) {
+                return response()->json([
+                    'message' => 'Refresh token has been revoked',
+                    'error' => 'token_revoked'
+                ], 401);
+            }
+
+            // Check if refresh token is expired
+            if ($refreshToken->expires_at < now()) {
+                return response()->json([
+                    'message' => 'Refresh token has expired',
+                    'error' => 'token_expired'
+                ], 401);
+            }
+
+            // Get the access token associated with the refresh token
+            $oldAccessToken = \Laravel\Passport\Token::find($refreshToken->access_token_id);
+
+            if (!$oldAccessToken) {
+                return response()->json([
+                    'message' => 'Associated access token not found',
+                    'error' => 'access_token_not_found'
+                ], 401);
+            }
+
+            // Get the user
+            $user = User::find($oldAccessToken->user_id);
+
+            if (!$user) {
+                return response()->json([
+                    'message' => 'User not found',
+                    'error' => 'user_not_found'
+                ], 401);
+            }
+
+            // Revoke old tokens
+            $oldAccessToken->revoke();
+            $refreshToken->revoked = true;
+            $refreshToken->save();
+
+            // Issue new tokens
+            $tokenData = $this->issueToken($user);
+
+            return response()->json([
+                'message' => 'Token refreshed successfully',
+                'access_token' => $tokenData['access_token'],
+                'refresh_token' => $tokenData['refresh_token'],
+                'token_type' => 'Bearer',
+                'expires_in' => $tokenData['expires_in'],
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to refresh token',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 
     public function logout(Request $request)
